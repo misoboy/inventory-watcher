@@ -10,12 +10,12 @@ import (
 )
 
 type MessageForm struct {
-	Title string
-	Text string
+	Title   string
+	Text    string
 	LinkUrl string
 }
 
-func Message(bot *tgbotapi.BotAPI, queue *goconcurrentqueue.FIFO, chatId *string){
+func Message(bot *tgbotapi.BotAPI, queue *goconcurrentqueue.FIFO, chatId *string) {
 
 	for true {
 
@@ -41,7 +41,7 @@ func Message(bot *tgbotapi.BotAPI, queue *goconcurrentqueue.FIFO, chatId *string
 			channelId, _ := strconv.ParseInt(*chatId, 10, 64)
 			msg := tgbotapi.NewMessage(channelId, "")
 			msg.ParseMode = "html"
-			msg.Text = fmt.Sprintf("<b>%s</b>\n%s\n<a href=\"%s\">링크 바로가기</a>", v.Title, v.Text,v.LinkUrl)
+			msg.Text = fmt.Sprintf("<b>%s</b>\n%s\n<a href=\"%s\">링크 바로가기</a>", v.Title, v.Text, v.LinkUrl)
 
 			_, err = bot.Send(msg)
 			if err == nil {
@@ -53,7 +53,7 @@ func Message(bot *tgbotapi.BotAPI, queue *goconcurrentqueue.FIFO, chatId *string
 	}
 }
 
-func UpdateChannel(bot *tgbotapi.BotAPI){
+func UpdateChannel(bot *tgbotapi.BotAPI) {
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60

@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func SamgShop(queue *goconcurrentqueue.FIFO, sendedMessage *map[string]bool){
+func SamgShop(queue *goconcurrentqueue.FIFO, sendedMessage *map[string]interface{}) {
 
 	c := colly.NewCollector(
 		//colly.Debugger(&debug.LogDebugger{}),
@@ -28,7 +28,7 @@ func SamgShop(queue *goconcurrentqueue.FIFO, sendedMessage *map[string]bool){
 		requestUrl = r.URL.String()
 	})
 
-	c.OnHTML("body > script", func(e *colly.HTMLElement){
+	c.OnHTML("body > script", func(e *colly.HTMLElement) {
 
 		title := e.DOM.Closest("body").Find("div.infoArea > .headingArea > h2").Text()
 
@@ -45,16 +45,16 @@ func SamgShop(queue *goconcurrentqueue.FIFO, sendedMessage *map[string]bool){
 			if data == "T" {
 				// 재고 없음
 				log.Println(fmt.Sprintf("[SamgShop] %s (재고 X)", title))
-				(*sendedMessage)["SAMG_" + productId] = false
+				(*sendedMessage)["SAMG_"+productId] = false
 			} else if data == "F" {
 				// 재고 있음
 				log.Println(fmt.Sprintf("[SamgShop] %s (재고 O)", title))
-				if v, ok := (*sendedMessage)["SAMG_" + productId]; ok && !v {
+				if v, ok := (*sendedMessage)["SAMG_"+productId].(bool); ok && !v {
 					queue.Enqueue(telegram.MessageForm{
 						Title: fmt.Sprintf("[%s]", title), Text: "구매 가능..!!!", LinkUrl: requestUrl,
 					})
 				}
-				(*sendedMessage)["SAMG_" + productId] = true
+				(*sendedMessage)["SAMG_"+productId] = true
 			}
 		}
 	})

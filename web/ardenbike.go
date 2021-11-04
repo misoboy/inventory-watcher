@@ -12,7 +12,7 @@ import (
 	_ "strings"
 )
 
-func ArdenShop(queue *goconcurrentqueue.FIFO, sendedMessage *map[string]bool){
+func ArdenShop(queue *goconcurrentqueue.FIFO, sendedMessage *map[string]interface{}) {
 
 	c := colly.NewCollector(
 		//colly.Debugger(&debug.LogDebugger{}),
@@ -30,7 +30,7 @@ func ArdenShop(queue *goconcurrentqueue.FIFO, sendedMessage *map[string]bool){
 		requestUrl = r.URL.String()
 	})
 
-	c.OnHTML("body > script", func(e *colly.HTMLElement){
+	c.OnHTML("body > script", func(e *colly.HTMLElement) {
 
 		title := strings.TrimSpace(e.DOM.Closest("body").Find("div.infomation > h3").Text())
 
@@ -54,15 +54,15 @@ func ArdenShop(queue *goconcurrentqueue.FIFO, sendedMessage *map[string]bool){
 
 					if stockNumber > 0 {
 						log.Println(fmt.Sprintf("[ArdenShop] %s [사이즈 : %s] (재고 O)", title, optionValue))
-						if v, ok := (*sendedMessage)["ARDEN_" + productId]; ok && !v {
+						if v, ok := (*sendedMessage)["ARDEN_"+productId].(bool); ok && !v {
 							queue.Enqueue(telegram.MessageForm{
 								Title: fmt.Sprintf("%s [사이즈 : %s]", title, optionValue), Text: "구매 가능..!!!", LinkUrl: requestUrl,
 							})
 						}
-						(*sendedMessage)["ARDEN_" + productId] = true
+						(*sendedMessage)["ARDEN_"+productId] = true
 					} else {
 						log.Println(fmt.Sprintf("[ArdenShop] %s [사이즈 : %s] (재고 X)", title, optionValue))
-						(*sendedMessage)["ARDEN_" + productId] = false
+						(*sendedMessage)["ARDEN_"+productId] = false
 					}
 				}
 			}

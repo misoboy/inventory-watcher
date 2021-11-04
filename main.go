@@ -13,7 +13,7 @@ import (
 var TELEGRAM_BOT_TOKEN = os.Getenv("TELEGRAM_BOT_TOKEN")
 var TELEGRAM_CHAT_ID = os.Getenv("TELEGRAM_CHAT_ID")
 
-func main(){
+func main() {
 
 	bot, err := tgbotapi.NewBotAPI(TELEGRAM_BOT_TOKEN)
 	//bot.Debug = true
@@ -27,10 +27,11 @@ func main(){
 	go telegram.UpdateChannel(bot)
 	go telegram.Message(bot, queue, &TELEGRAM_CHAT_ID)
 
-	var sendedMessage = make(map[string]bool)
+	var sendedMessage = make(map[string]interface{})
 	gocron.Every(30).Seconds().Do(web.ArdenShop, queue, &sendedMessage)
 	gocron.Every(30).Seconds().Do(web.SamgShop, queue, &sendedMessage)
+	gocron.Every(30).Seconds().Do(web.BF_Ppomppu, queue, &sendedMessage)
 
-	<- gocron.Start()
+	<-gocron.Start()
 
 }
