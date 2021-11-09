@@ -4,13 +4,45 @@ import (
 	"fmt"
 	"github.com/enriquebris/goconcurrentqueue"
 	"github.com/gocolly/colly/v2"
-	"inventory-watcher/telegram"
+	"github.com/jasonlvhit/gocron"
+	"inventory-watcher/cron"
 	"log"
 	"regexp"
 	"strings"
 )
 
-func SamgShop(queue *goconcurrentqueue.FIFO, sendedMessage *map[string]interface{}) {
+type ISamg interface {
+	cron.ICronAction
+	samgShop(queue *goconcurrentqueue.FIFO, sendMessage *map[string]interface{})
+}
+
+type samg struct {
+	queue       *goconcurrentqueue.FIFO
+	sendMessage *map[string]interface{}
+}
+
+func NewSamg(q *goconcurrentqueue.FIFO, m *map[string]interface{}) cron.ICronAction {
+	return &samg{
+		queue:       q,
+		sendMessage: m,
+	}
+}
+
+func (s *samg) Start() {
+	// 해외뽐뿌
+	job := gocron.Every(30).Seconds()
+	job.Tag("삼진샵 > 반짝반짝캐치티니핑")
+	job.Do(s.samgShop, s.queue, s.sendMessage)
+	log.Println("Cron Start : SamgShop")
+
+}
+
+func (s *samg) Stop() {
+	gocron.Remove(s.samgShop)
+	log.Println("Cron Stop : SamgShop")
+}
+
+func (s *samg) samgShop(queue *goconcurrentqueue.FIFO, sendMessage *map[string]interface{}) {
 
 	c := colly.NewCollector(
 		//colly.Debugger(&debug.LogDebugger{}),
@@ -45,16 +77,18 @@ func SamgShop(queue *goconcurrentqueue.FIFO, sendedMessage *map[string]interface
 			if data == "T" {
 				// 재고 없음
 				log.Println(fmt.Sprintf("[SamgShop] %s (재고 X)", title))
-				(*sendedMessage)["SAMG_"+productId] = false
+				(*sendMessage)["SAMG_"+productId] = false
 			} else if data == "F" {
 				// 재고 있음
 				log.Println(fmt.Sprintf("[SamgShop] %s (재고 O)", title))
-				if v, ok := (*sendedMessage)["SAMG_"+productId].(bool); ok && !v {
-					queue.Enqueue(telegram.MessageForm{
-						Title: fmt.Sprintf("[%s]", title), Text: "구매 가능..!!!", LinkUrl: requestUrl,
-					})
+				if v, ok := (*sendMessage)["SAMG_"+productId].(bool); ok && !v {
+					messageMap := map[string]string{}
+					messageMap["title"] = fmt.Sprintf("[삼진샵] %s", title)
+					messageMap["text"] = "구매 가능..!!!"
+					messageMap["linkUrl"] = requestUrl
+					queue.Enqueue(messageMap)
 				}
-				(*sendedMessage)["SAMG_"+productId] = true
+				(*sendMessage)["SAMG_"+productId] = true
 			}
 		}
 	})

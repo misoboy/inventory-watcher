@@ -1,6 +1,9 @@
 # Inventory Watcher (by Golang)
 재고 조회를 GoLang 으로 구현한 데몬 애플리케이션 입니다.<br/>
 1. SAMG SHOP
+2. AdenBike Shop
+3. PPOMPPU
+4. RULIWEB
 
 ## Prerequisite
 GoLang (1.17.2) 버전으로 작성 되었습니다.

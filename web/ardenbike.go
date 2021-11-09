@@ -5,14 +5,44 @@ import (
 	"fmt"
 	"github.com/enriquebris/goconcurrentqueue"
 	"github.com/gocolly/colly/v2"
-	"inventory-watcher/telegram"
+	"github.com/jasonlvhit/gocron"
+	"inventory-watcher/cron"
 	"log"
 	"regexp"
 	"strings"
 	_ "strings"
 )
 
-func ArdenShop(queue *goconcurrentqueue.FIFO, sendedMessage *map[string]interface{}) {
+type IArdenbike interface {
+	cron.ICronAction
+	ardenShop(queue *goconcurrentqueue.FIFO, sendMessage *map[string]interface{})
+}
+
+type ardenbike struct {
+	queue       *goconcurrentqueue.FIFO
+	sendMessage *map[string]interface{}
+}
+
+func NewArdenbike(q *goconcurrentqueue.FIFO, m *map[string]interface{}) IArdenbike {
+	return &ardenbike{
+		queue:       q,
+		sendMessage: m,
+	}
+}
+
+func (s *ardenbike) Start() {
+	job := gocron.Every(30).Seconds()
+	job.Tag("아덴바이크 > 프라임 하드쉘 의류")
+	job.Do(s.ardenShop, s.queue, s.sendMessage)
+	log.Println("Cron Start : ArdenShop")
+}
+
+func (s *ardenbike) Stop() {
+	gocron.Remove(s.ardenShop)
+	log.Println("Cron Stop : ArdenShop")
+}
+
+func (s *ardenbike) ardenShop(queue *goconcurrentqueue.FIFO, sendMessage *map[string]interface{}) {
 
 	c := colly.NewCollector(
 		//colly.Debugger(&debug.LogDebugger{}),
@@ -54,15 +84,17 @@ func ArdenShop(queue *goconcurrentqueue.FIFO, sendedMessage *map[string]interfac
 
 					if stockNumber > 0 {
 						log.Println(fmt.Sprintf("[ArdenShop] %s [사이즈 : %s] (재고 O)", title, optionValue))
-						if v, ok := (*sendedMessage)["ARDEN_"+productId].(bool); ok && !v {
-							queue.Enqueue(telegram.MessageForm{
-								Title: fmt.Sprintf("%s [사이즈 : %s]", title, optionValue), Text: "구매 가능..!!!", LinkUrl: requestUrl,
-							})
+						if v, ok := (*sendMessage)["ARDEN_"+productId].(bool); ok && !v {
+							messageMap := map[string]string{}
+							messageMap["title"] = fmt.Sprintf("[아덴바이크] %s [사이즈 : %s]", title, optionValue)
+							messageMap["text"] = "구매 가능..!!!"
+							messageMap["linkUrl"] = requestUrl
+							queue.Enqueue(messageMap)
 						}
-						(*sendedMessage)["ARDEN_"+productId] = true
+						(*sendMessage)["ARDEN_"+productId] = true
 					} else {
 						log.Println(fmt.Sprintf("[ArdenShop] %s [사이즈 : %s] (재고 X)", title, optionValue))
-						(*sendedMessage)["ARDEN_"+productId] = false
+						(*sendMessage)["ARDEN_"+productId] = false
 					}
 				}
 			}
