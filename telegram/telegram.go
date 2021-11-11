@@ -8,16 +8,45 @@ import (
 	"inventory-watcher/cron"
 	"log"
 	"strconv"
-	"strings"
+	"time"
 )
 
-func Message(bot *tgbotapi.BotAPI, queue *goconcurrentqueue.FIFO, chatId *string) {
+type ITelegram interface {
+	Message()
+	UpdateChannel()
+}
+
+type telegram struct {
+	bot         *tgbotapi.BotAPI
+	queue       *goconcurrentqueue.FIFO
+	cron        *gocron.Scheduler
+	cronActions *map[string]cron.ICronAction
+	chatId      *string
+}
+
+func NewTelegram(
+	bot *tgbotapi.BotAPI,
+	queue *goconcurrentqueue.FIFO,
+	subCron *gocron.Scheduler,
+	cronActions *map[string]cron.ICronAction,
+	chatId *string,
+) ITelegram {
+	return &telegram{
+		bot:         bot,
+		queue:       queue,
+		cron:        subCron,
+		cronActions: cronActions,
+		chatId:      chatId,
+	}
+}
+
+func (s *telegram) Message() {
 
 	for true {
 
-		if queue.GetLen() != 0 {
+		if s.queue.GetLen() != 0 {
 
-			item, err := queue.Dequeue()
+			item, err := s.queue.Dequeue()
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -25,100 +54,166 @@ func Message(bot *tgbotapi.BotAPI, queue *goconcurrentqueue.FIFO, chatId *string
 
 			v := item.(map[string]string)
 
-			//resp, _ := client.R().
-			//	SetQueryParams(map[string]string{
-			//		"chat_id": TELEGRAM_CHAT_ID,
-			//		"text": fmt.Sprintf("<b>%s</b>\n%s\n<a href=\"%s\">링크 바로가기</a>", v.Title, v.Text,v.LinkUrl),
-			//		"parse_mode": "HTML",
-			//	}).
-			//	EnableTrace().
-			//	Get(fmt.Sprintf("%s/bot%s/sendMessage", TELEGRAM_API_URL, TELEGRAM_BOT_TOKEN))
-
-			channelId, _ := strconv.ParseInt(*chatId, 10, 64)
+			channelId, _ := strconv.ParseInt(*s.chatId, 10, 64)
 			msg := tgbotapi.NewMessage(channelId, "")
 			msg.ParseMode = "html"
-			msg.Text = fmt.Sprintf("<b>%s</b>\n%s\n<a href=\"%s\">링크 바로가기</a>", v["title"], v["text"], v["linkUrl"])
+			msg.Text = fmt.Sprintf("<b>%s</b>\n%s\n[첨부 이미지]", v["title"], v["text"])
 
-			_, err = bot.Send(msg)
+			numericKeyboard := tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonURL("링크 바로가기", v["linkUrl"]),
+				),
+			)
+
+			msg.ReplyMarkup = numericKeyboard
+
+			_, err = s.bot.Send(msg)
 			if err == nil {
 				log.Println("Telegram Send Message Completed")
 			} else {
 				log.Println("Telegram Send Message Failed")
+				log.Panic(err)
 			}
 		}
 	}
 }
 
-func UpdateChannel(bot *tgbotapi.BotAPI, cronActions *map[string]cron.ICronAction) {
+func (s *telegram) UpdateChannel() {
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
-	updates, _ := bot.GetUpdatesChan(u)
+	updates, _ := s.bot.GetUpdatesChan(u)
 
-	for update := range updates {
-		if update.Message == nil {
-			continue
-		}
+	for {
+		select {
+		case update := <-updates:
+			var fromId int64
+			var text string
+			var markup interface{}
+			if update.CallbackQuery != nil {
+				text, markup = s.commandCallback(update.CallbackQuery.Data)
+				fromId = int64(update.CallbackQuery.From.ID)
 
-		if update.Message.IsCommand() {
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
-			msg.ParseMode = "html"
-			arg := strings.TrimSpace(update.Message.CommandArguments())
-			switch update.Message.Command() {
-			case "help":
-				msg.Text = "배치 실행 : /start {all,samg,arden,ppomppu,ruliweb}\n배치 중지 : /stop {all,samg,arden,ppomppu,ruliweb}\n상태 조회 : /health\n도움말 : /help"
-			case "stop":
-				if arg == "" {
-					msg.Text = "Required Argument /stop {all,samg,arden,ppomppu,ruliweb}"
-				} else if arg == "all" {
-					gocron.Clear()
-					msg.Text = "[All] 배치 모두 정지"
-				} else if arg == "samg" {
-					(*cronActions)["SAMG"].Stop()
-					msg.Text = "[삼진샵] 배치 정지"
-				} else if arg == "arden" {
-					(*cronActions)["ARDEN"].Stop()
-					msg.Text = "[아덴바이크] 배치 정지"
-				} else if arg == "ppomppu" {
-					(*cronActions)["PPOMPPU"].Stop()
-					msg.Text = "[뽐뿌] 배치 정지"
-				} else if arg == "ruliweb" {
-					(*cronActions)["RULIWEB"].Stop()
-					msg.Text = "[루리웹] 배치 정지"
+			} else if update.Message != nil {
+				fromId = update.Message.Chat.ID
+
+				//if update.Message.NewChatMembers != nil {
+				//	for _, v := range *update.Message.NewChatMembers {
+				//		msg.Text += fmt.Sprintf("%s님", v.UserName)
+				//	}
+				//	msg.Text = "어서오세요. 반갑습니다."
+				//}
+
+				if update.Message.IsCommand() {
+					text, markup = s.commandAction(update.Message.Command())
 				}
-			case "start":
-				if arg == "" {
-					msg.Text = "Required Argument /start {all,samg,arden,ppomppu,ruliweb}"
-				} else if arg == "all" {
-					(*cronActions)["SAMG"].Start()
-					(*cronActions)["ARDEN"].Start()
-					(*cronActions)["PPOMPPU"].Start()
-					(*cronActions)["RULIWEB"].Start()
-					msg.Text = "[All] 배치 모두 시작"
-				} else if arg == "samg" {
-					(*cronActions)["SAMG"].Start()
-					msg.Text = "[삼진샵] 배치 시작"
-				} else if arg == "arden" {
-					(*cronActions)["ARDEN"].Start()
-					msg.Text = "[아덴바이크] 배치 시작"
-				} else if arg == "ppomppu" {
-					(*cronActions)["PPOMPPU"].Start()
-					msg.Text = "[뽐뿌] 배치 시작"
-				} else if arg == "ruliweb" {
-					(*cronActions)["RULIWEB"].Start()
-					msg.Text = "[루리웹] 배치 시작"
-				}
-			case "health":
-				msg.Text = fmt.Sprintf("Healthy is Job Running : %d \n", len(gocron.Jobs()))
-				for i, job := range gocron.Jobs() {
-					msg.Text += fmt.Sprintf("%d) %s\n", i+1, job.Tags()[0])
-				}
-			default:
-				msg.Text = "I don't know that command"
 			}
-			bot.Send(msg)
+
+			msg := tgbotapi.NewMessage(fromId, "")
+			msg.ParseMode = "html"
+			msg.ReplyMarkup = markup
+			msg.Text = text
+
+			_, err := s.bot.Send(msg)
+			if err == nil {
+				log.Println("Telegram Send Command Message Completed")
+			} else {
+				log.Println("Telegram Send Command Message Failed")
+				log.Panic(err)
+			}
 		}
+	}
+	//for update := range updates {
+	//
+	//}
+}
+
+func (s *telegram) commandAction(command string) (string, interface{}) {
+	var text string
+	var helpBtn interface{}
+	if command == "start" || command == "help" {
+		helpBtn = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("모두 실행", "start_all"),
+				tgbotapi.NewInlineKeyboardButtonData("삼진", "start_samg"),
+				tgbotapi.NewInlineKeyboardButtonData("아덴바이크", "start_arden"),
+				tgbotapi.NewInlineKeyboardButtonData("뽐뿌", "start_ppomppu"),
+				tgbotapi.NewInlineKeyboardButtonData("루리웹", "start_ruliweb"),
+			),
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("모두 중지", "stop_all"),
+				tgbotapi.NewInlineKeyboardButtonData("삼진", "stop_samg"),
+				tgbotapi.NewInlineKeyboardButtonData("아덴바이크", "stop_arden"),
+				tgbotapi.NewInlineKeyboardButtonData("뽐뿌", "stop_ppomppu"),
+				tgbotapi.NewInlineKeyboardButtonData("루리웹", "stop_ruliweb"),
+			),
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("상태 조회", "health"),
+				tgbotapi.NewInlineKeyboardButtonData("도움말", "help"),
+			),
+		)
+
+		text = "시작 및 도움말 안내.\n기능은 다음 버튼을 통해 실행 가능해요."
 
 	}
+	return text, helpBtn
+}
+
+func (s *telegram) commandCallback(commandData string) (string, interface{}) {
+
+	var text string
+	switch commandData {
+	case "start_all":
+		for _, v := range *s.cronActions {
+			v.Start()
+		}
+		text = "[All] 배치 모두 시작 완료"
+	case "start_samg":
+		(*s.cronActions)["SAMG"].Start()
+		text = "[삼진샵] 배치 시작 완료"
+	case "start_arden":
+		(*s.cronActions)["ARDEN"].Start()
+		text = "[아덴바이크] 배치 시작 완료"
+	case "start_ppomppu":
+		(*s.cronActions)["PPOMPPU"].Start()
+		text = "[뽐뿌] 배치 시작 완료"
+	case "start_ruliweb":
+		(*s.cronActions)["RULIWEB"].Start()
+		text = "[루리웹] 배치 시작 완료"
+	case "stop_all":
+		for _, v := range *s.cronActions {
+			v.Stop()
+		}
+		text = "[All] 배치 모두 중지 완료"
+	case "stop_samg":
+		(*s.cronActions)["SAMG"].Stop()
+		text = "[삼진샵] 배치 중지 완료"
+	case "stop_arden":
+		(*s.cronActions)["ARDEN"].Stop()
+		text = "[아덴바이크] 배치 중지 완료"
+	case "stop_ppomppu":
+		(*s.cronActions)["PPOMPPU"].Stop()
+		text = "[뽐뿌] 배치 중지 완료"
+	case "stop_ruliweb":
+		(*s.cronActions)["RULIWEB"].Stop()
+		text = "[루리웹] 배치 중지 완료"
+	case "health":
+		kst, _ := time.LoadLocation("Asia/Seoul")
+		rootTxt := fmt.Sprintf("Root Cron Job Running : %d \n", len(gocron.Jobs()))
+		for i, job := range gocron.Jobs() {
+			rootTxt += fmt.Sprintf("%d) %s (%s)\n", i+1, job.Tags()[1], job.NextScheduledTime().In(kst).Format("2006-01-02 15:04:05"))
+		}
+		subTxt := fmt.Sprintf("Sub Cron Job Running : %d \n", len(s.cron.Jobs()))
+		for i, job := range s.cron.Jobs() {
+			subTxt += fmt.Sprintf("%d) %s (%s)\n", i+1, job.Tags()[1], job.NextScheduledTime().In(kst).Format("2006-01-02 15:04:05"))
+		}
+		text = rootTxt + "\n" + subTxt
+	case "help":
+		return s.commandAction("help")
+	default:
+		text = ""
+	}
+
+	return text, nil
 }

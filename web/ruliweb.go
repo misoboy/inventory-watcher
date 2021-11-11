@@ -16,12 +16,14 @@ type IRuliweb interface {
 }
 
 type ruliweb struct {
+	cron        *gocron.Scheduler
 	queue       *goconcurrentqueue.FIFO
 	sendMessage *map[string]interface{}
 }
 
-func NewRuliweb(q *goconcurrentqueue.FIFO, m *map[string]interface{}) cron.ICronAction {
+func NewRuliweb(c *gocron.Scheduler, q *goconcurrentqueue.FIFO, m *map[string]interface{}) cron.ICronAction {
 	return &ruliweb{
+		cron:        c,
 		queue:       q,
 		sendMessage: m,
 	}
@@ -29,14 +31,14 @@ func NewRuliweb(q *goconcurrentqueue.FIFO, m *map[string]interface{}) cron.ICron
 
 func (s *ruliweb) Start() {
 	// 예판/핫딜
-	job := gocron.Every(30).Seconds()
-	job.Tag("루리웹 > 예판/핫딜")
+	job := s.cron.Every(30).Seconds()
+	job.Tag("ruliweb", "루리웹 > 예판/핫딜")
 	job.Do(s.hotdeal_ruliweb, s.queue, s.sendMessage)
 	log.Println("Cron Start : Hotdeal ruliweb")
 }
 
 func (s *ruliweb) Stop() {
-	gocron.Remove(s.hotdeal_ruliweb)
+	s.cron.Remove(s.hotdeal_ruliweb)
 	log.Println("Cron Stop : Hotdeal ruliweb")
 }
 
@@ -91,4 +93,14 @@ func (s *ruliweb) hotdeal_ruliweb(queue *goconcurrentqueue.FIFO, sendMessage *ma
 	c.Visit(fmt.Sprintf("%s/nin/board/1020?view=gallery", WEB_URL))
 
 	log.Println("[hotdeal_ruliweb] Crawling end")
+}
+
+func (s *ruliweb) IsRunning() bool {
+	for _, v := range s.cron.Jobs() {
+		if "ruliweb" == (*v).Tags()[0] {
+			return true
+		}
+	}
+
+	return false
 }

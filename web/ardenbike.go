@@ -19,26 +19,28 @@ type IArdenbike interface {
 }
 
 type ardenbike struct {
+	cron        *gocron.Scheduler
 	queue       *goconcurrentqueue.FIFO
 	sendMessage *map[string]interface{}
 }
 
-func NewArdenbike(q *goconcurrentqueue.FIFO, m *map[string]interface{}) IArdenbike {
+func NewArdenbike(c *gocron.Scheduler, q *goconcurrentqueue.FIFO, m *map[string]interface{}) IArdenbike {
 	return &ardenbike{
+		cron:        c,
 		queue:       q,
 		sendMessage: m,
 	}
 }
 
 func (s *ardenbike) Start() {
-	job := gocron.Every(30).Seconds()
-	job.Tag("아덴바이크 > 프라임 하드쉘 의류")
+	job := s.cron.Every(30).Seconds()
+	job.Tag("arden", "아덴바이크 > 프라임 하드쉘 의류")
 	job.Do(s.ardenShop, s.queue, s.sendMessage)
 	log.Println("Cron Start : ArdenShop")
 }
 
 func (s *ardenbike) Stop() {
-	gocron.Remove(s.ardenShop)
+	s.cron.Remove(s.ardenShop)
 	log.Println("Cron Stop : ArdenShop")
 }
 
@@ -84,6 +86,9 @@ func (s *ardenbike) ardenShop(queue *goconcurrentqueue.FIFO, sendMessage *map[st
 
 					if stockNumber > 0 {
 						log.Println(fmt.Sprintf("[ArdenShop] %s [사이즈 : %s] (재고 O)", title, optionValue))
+						if (*sendMessage)["ARDEN_"+productId] == nil {
+							(*sendMessage)["ARDEN_"+productId] = false
+						}
 						if v, ok := (*sendMessage)["ARDEN_"+productId].(bool); ok && !v {
 							messageMap := map[string]string{}
 							messageMap["title"] = fmt.Sprintf("[아덴바이크] %s [사이즈 : %s]", title, optionValue)
@@ -107,4 +112,14 @@ func (s *ardenbike) ardenShop(queue *goconcurrentqueue.FIFO, sendMessage *map[st
 	}
 
 	log.Println("[ArdenShop] Crawling end")
+}
+
+func (s *ardenbike) IsRunning() bool {
+	for _, v := range s.cron.Jobs() {
+		if "arden" == (*v).Tags()[0] {
+			return true
+		}
+	}
+
+	return false
 }

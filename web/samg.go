@@ -17,12 +17,14 @@ type ISamg interface {
 }
 
 type samg struct {
+	cron        *gocron.Scheduler
 	queue       *goconcurrentqueue.FIFO
 	sendMessage *map[string]interface{}
 }
 
-func NewSamg(q *goconcurrentqueue.FIFO, m *map[string]interface{}) cron.ICronAction {
+func NewSamg(c *gocron.Scheduler, q *goconcurrentqueue.FIFO, m *map[string]interface{}) cron.ICronAction {
 	return &samg{
+		cron:        c,
 		queue:       q,
 		sendMessage: m,
 	}
@@ -30,15 +32,15 @@ func NewSamg(q *goconcurrentqueue.FIFO, m *map[string]interface{}) cron.ICronAct
 
 func (s *samg) Start() {
 	// 해외뽐뿌
-	job := gocron.Every(30).Seconds()
-	job.Tag("삼진샵 > 반짝반짝캐치티니핑")
+	job := s.cron.Every(30).Seconds()
+	job.Tag("samg", "삼진샵 > 반짝반짝캐치티니핑")
 	job.Do(s.samgShop, s.queue, s.sendMessage)
 	log.Println("Cron Start : SamgShop")
 
 }
 
 func (s *samg) Stop() {
-	gocron.Remove(s.samgShop)
+	s.cron.Remove(s.samgShop)
 	log.Println("Cron Stop : SamgShop")
 }
 
@@ -81,6 +83,10 @@ func (s *samg) samgShop(queue *goconcurrentqueue.FIFO, sendMessage *map[string]i
 			} else if data == "F" {
 				// 재고 있음
 				log.Println(fmt.Sprintf("[SamgShop] %s (재고 O)", title))
+				if (*sendMessage)["SAMG_"+productId] == nil {
+					(*sendMessage)["SAMG_"+productId] = false
+				}
+
 				if v, ok := (*sendMessage)["SAMG_"+productId].(bool); ok && !v {
 					messageMap := map[string]string{}
 					messageMap["title"] = fmt.Sprintf("[삼진샵] %s", title)
@@ -99,4 +105,14 @@ func (s *samg) samgShop(queue *goconcurrentqueue.FIFO, sendMessage *map[string]i
 	}
 
 	log.Println("[SamgShop] Crawling end")
+}
+
+func (s *samg) IsRunning() bool {
+	for _, v := range s.cron.Jobs() {
+		if "samg" == (*v).Tags()[0] {
+			return true
+		}
+	}
+
+	return false
 }

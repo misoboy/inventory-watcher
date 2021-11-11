@@ -24,20 +24,32 @@ func main() {
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	queue := goconcurrentqueue.NewFIFO()
+	subCron := gocron.NewScheduler()
 
-	var sendMessage = make(map[string]interface{})
+	sendMessage := make(map[string]interface{})
 	cronActions := make(map[string]cron.ICronAction)
-	cronActions["ARDEN"] = web.NewArdenbike(queue, &sendMessage)
-	cronActions["SAMG"] = web.NewSamg(queue, &sendMessage)
-	cronActions["PPOMPPU"] = web.NewPpomppu(queue, &sendMessage)
-	cronActions["RULIWEB"] = web.NewRuliweb(queue, &sendMessage)
-	go telegram.UpdateChannel(bot, &cronActions)
-	go telegram.Message(bot, queue, &TELEGRAM_CHAT_ID)
+	cronActions["ARDEN"] = web.NewArdenbike(subCron, queue, &sendMessage)
+	cronActions["SAMG"] = web.NewSamg(subCron, queue, &sendMessage)
+	cronActions["PPOMPPU"] = web.NewPpomppu(subCron, queue, &sendMessage)
+	cronActions["RULIWEB"] = web.NewRuliweb(subCron, queue, &sendMessage)
 
-	for _, v := range cronActions {
-		v.Start()
-	}
+	mainCron := cron.NewCron(subCron, &cronActions, queue)
+	// 오전 7시 (UTC + 9Hour)
+	job1 := gocron.Every(1).Day().At("22:00:00")
+	job1.Tag("startat", "Root StartAt Job")
+	job1.Do(mainCron.Start)
+	// 오후 10시 (UTC + 9Hour)
+	job2 := gocron.Every(1).Day().At("13:00:00")
+	job2.Tag("endat", "Root EndAt Job")
+	job2.Do(mainCron.Stop)
+
+	go func() {
+		<-subCron.Start()
+	}()
+
+	tg := telegram.NewTelegram(bot, queue, subCron, &cronActions, &TELEGRAM_CHAT_ID)
+	go tg.UpdateChannel()
+	go tg.Message()
 
 	<-gocron.Start()
-
 }

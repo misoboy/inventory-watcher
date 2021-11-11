@@ -17,12 +17,14 @@ type IPpomppu interface {
 }
 
 type ppomppu struct {
+	cron        *gocron.Scheduler
 	queue       *goconcurrentqueue.FIFO
 	sendMessage *map[string]interface{}
 }
 
-func NewPpomppu(q *goconcurrentqueue.FIFO, m *map[string]interface{}) cron.ICronAction {
+func NewPpomppu(c *gocron.Scheduler, q *goconcurrentqueue.FIFO, m *map[string]interface{}) cron.ICronAction {
 	return &ppomppu{
+		cron:        c,
 		queue:       q,
 		sendMessage: m,
 	}
@@ -30,21 +32,21 @@ func NewPpomppu(q *goconcurrentqueue.FIFO, m *map[string]interface{}) cron.ICron
 
 func (s *ppomppu) Start() {
 	// 해외뽐뿌
-	job := gocron.Every(30).Seconds()
-	job.Tag("뽐뿌 > 해외뽐뿌")
+	job := s.cron.Every(30).Seconds()
+	job.Tag("ppomppu", "뽐뿌 > 해외뽐뿌")
 	job.Do(s.bf_ppomppu, s.queue, s.sendMessage)
 	log.Println("Cron Start : BF Ppomppu")
 	// 쇼핑뽐뿌
-	job1 := gocron.Every(30).Seconds()
-	job1.Tag("뽐뿌 > 쇼핑뽐뿌")
+	job1 := s.cron.Every(30).Seconds()
+	job1.Tag("ppomppu", "뽐뿌 > 쇼핑뽐뿌")
 	job1.Do(s.shopping_ppomppu, s.queue, s.sendMessage)
 	log.Println("Cron Start : SHOPPING Ppomppu")
 }
 
 func (s *ppomppu) Stop() {
-	gocron.Remove(s.bf_ppomppu)
+	s.cron.Remove(s.bf_ppomppu)
 	log.Println("Cron Stop : BF Ppomppu")
-	gocron.Remove(s.shopping_ppomppu)
+	s.cron.Remove(s.shopping_ppomppu)
 	log.Println("Cron Stop : SHOPPING Ppomppu")
 }
 
@@ -159,4 +161,14 @@ func (s *ppomppu) shopping_ppomppu(queue *goconcurrentqueue.FIFO, sendMessage *m
 	c.Visit(fmt.Sprintf("%s/zboard/zboard.php?id=pmarket", WEB_URL))
 
 	log.Println("[SHOPPING_Ppomppu] Crawling end")
+}
+
+func (s *ppomppu) IsRunning() bool {
+	for _, v := range s.cron.Jobs() {
+		if "ppomppu" == (*v).Tags()[0] {
+			return true
+		}
+	}
+
+	return false
 }
