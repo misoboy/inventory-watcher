@@ -89,12 +89,13 @@ func (s *samg) samgShop(queue *goconcurrentqueue.FIFO, sendMessage *map[string]i
 
 				if v, ok := (*sendMessage)["SAMG_"+productId].(bool); ok && !v {
 					messageMap := map[string]string{}
-					messageMap["title"] = fmt.Sprintf("[삼진샵] %s", title)
-					messageMap["text"] = "구매 가능..!!!"
+					messageMap["title"] = "[삼진샵 > 티니핑]"
+					messageMap["text"] = title
 					messageMap["linkUrl"] = requestUrl
 					queue.Enqueue(messageMap)
 				}
 				(*sendMessage)["SAMG_"+productId] = true
+				fmt.Println()
 			}
 		}
 	})

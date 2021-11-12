@@ -91,8 +91,8 @@ func (s *ardenbike) ardenShop(queue *goconcurrentqueue.FIFO, sendMessage *map[st
 						}
 						if v, ok := (*sendMessage)["ARDEN_"+productId].(bool); ok && !v {
 							messageMap := map[string]string{}
-							messageMap["title"] = fmt.Sprintf("[아덴바이크] %s [사이즈 : %s]", title, optionValue)
-							messageMap["text"] = "구매 가능..!!!"
+							messageMap["title"] = "[아덴바이크 > 남성 동계용 자켓]"
+							messageMap["text"] = fmt.Sprintf("%s [사이즈 : %s]", title, optionValue)
 							messageMap["linkUrl"] = requestUrl
 							queue.Enqueue(messageMap)
 						}

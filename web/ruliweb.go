@@ -78,8 +78,9 @@ func (s *ruliweb) hotdeal_ruliweb(queue *goconcurrentqueue.FIFO, sendMessage *ma
 					if v, ok := (*sendMessage)["HOTDEAL_RULIWEB_IDX"].(string); !ok || v != idx {
 
 						messageMap := map[string]string{}
-						messageMap["title"] = fmt.Sprintf("[예판/핫딜] %s", title)
-						messageMap["text"] = fmt.Sprintf("<a href=\"%s\"> </a>", imgSrc)
+						messageMap["title"] = fmt.Sprintf("[루리웹 > 예판/핫딜]")
+						messageMap["text"] = title
+						messageMap["imgUrl"] = imgSrc
 						messageMap["linkUrl"] = hrefSrc
 						queue.Enqueue(messageMap)
 					}

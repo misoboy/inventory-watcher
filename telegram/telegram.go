@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"errors"
 	"fmt"
 	"github.com/enriquebris/goconcurrentqueue"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
@@ -42,6 +43,15 @@ func NewTelegram(
 
 func (s *telegram) Message() {
 
+	defer func() {
+		s.recover(recover(), func(err error) {
+			messageMap := map[string]string{}
+			messageMap["title"] = "[Error] Message 에러 발생"
+			messageMap["text"] = err.Error()
+			s.queue.Enqueue(messageMap)
+		})
+	}()
+
 	for true {
 
 		if s.queue.GetLen() != 0 {
@@ -57,15 +67,19 @@ func (s *telegram) Message() {
 			channelId, _ := strconv.ParseInt(*s.chatId, 10, 64)
 			msg := tgbotapi.NewMessage(channelId, "")
 			msg.ParseMode = "html"
-			msg.Text = fmt.Sprintf("<b>%s</b>\n%s\n[첨부 이미지]", v["title"], v["text"])
+			msg.Text = fmt.Sprintf("<strong>%s</strong>\n%s", v["title"], v["text"])
+			if val, ok := v["imgUrl"]; ok && val != "" {
+				msg.Text += fmt.Sprintf("\n<a href=\"%s\"> </a>\n[첨부이미지]", v["imgUrl"])
+			}
 
-			numericKeyboard := tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonURL("링크 바로가기", v["linkUrl"]),
-				),
-			)
+			if val, ok := v["linkUrl"]; ok && val != "" {
 
-			msg.ReplyMarkup = numericKeyboard
+				msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonURL("링크 바로가기", v["linkUrl"]),
+					),
+				)
+			}
 
 			_, err = s.bot.Send(msg)
 			if err == nil {
@@ -80,6 +94,15 @@ func (s *telegram) Message() {
 
 func (s *telegram) UpdateChannel() {
 
+	defer func() {
+		s.recover(recover(), func(err error) {
+			messageMap := map[string]string{}
+			messageMap["title"] = "[Error] UpdateChannel 에러 발생"
+			messageMap["text"] = err.Error()
+			s.queue.Enqueue(messageMap)
+		})
+	}()
+
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
@@ -89,7 +112,7 @@ func (s *telegram) UpdateChannel() {
 		select {
 		case update := <-updates:
 			var fromId int64
-			var text string
+			var text = ""
 			var markup interface{}
 			if update.CallbackQuery != nil {
 				text, markup = s.commandCallback(update.CallbackQuery.Data)
@@ -102,7 +125,7 @@ func (s *telegram) UpdateChannel() {
 				//	for _, v := range *update.Message.NewChatMembers {
 				//		msg.Text += fmt.Sprintf("%s님", v.UserName)
 				//	}
-				//	msg.Text = "어서오세요. 반갑습니다."
+				//	msg.Text = "어서오세요. 반갑습니다132."
 				//}
 
 				if update.Message.IsCommand() {
@@ -110,47 +133,47 @@ func (s *telegram) UpdateChannel() {
 				}
 			}
 
-			msg := tgbotapi.NewMessage(fromId, "")
-			msg.ParseMode = "html"
-			msg.ReplyMarkup = markup
-			msg.Text = text
+			if text != "" {
+				msg := tgbotapi.NewMessage(fromId, "")
+				msg.ParseMode = "html"
+				msg.ReplyMarkup = markup
+				msg.Text = text
 
-			_, err := s.bot.Send(msg)
-			if err == nil {
-				log.Println("Telegram Send Command Message Completed")
-			} else {
-				log.Println("Telegram Send Command Message Failed")
-				log.Panic(err)
+				_, err := s.bot.Send(msg)
+				if err == nil {
+					log.Println("Telegram Send Command Message Completed")
+				} else {
+					log.Println("Telegram Send Command Message Failed")
+					log.Panic(err)
+				}
 			}
 		}
 	}
-	//for update := range updates {
-	//
-	//}
 }
 
 func (s *telegram) commandAction(command string) (string, interface{}) {
-	var text string
+
+	var text = "/start or /help 도움말을 통해 버튼 기능을 이용 해주세요."
 	var helpBtn interface{}
 	if command == "start" || command == "help" {
 		helpBtn = tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("모두 실행", "start_all"),
-				tgbotapi.NewInlineKeyboardButtonData("삼진", "start_samg"),
-				tgbotapi.NewInlineKeyboardButtonData("아덴바이크", "start_arden"),
-				tgbotapi.NewInlineKeyboardButtonData("뽐뿌", "start_ppomppu"),
-				tgbotapi.NewInlineKeyboardButtonData("루리웹", "start_ruliweb"),
+				tgbotapi.NewInlineKeyboardButtonData("삼진 ✔", "start_samg"),
+				tgbotapi.NewInlineKeyboardButtonData("아덴 ✔", "start_arden"),
+				tgbotapi.NewInlineKeyboardButtonData("뽐뿌 ✔", "start_ppomppu"),
+				tgbotapi.NewInlineKeyboardButtonData("루리웹 ✔", "start_ruliweb"),
 			),
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("모두 중지", "stop_all"),
-				tgbotapi.NewInlineKeyboardButtonData("삼진", "stop_samg"),
-				tgbotapi.NewInlineKeyboardButtonData("아덴바이크", "stop_arden"),
-				tgbotapi.NewInlineKeyboardButtonData("뽐뿌", "stop_ppomppu"),
-				tgbotapi.NewInlineKeyboardButtonData("루리웹", "stop_ruliweb"),
+				tgbotapi.NewInlineKeyboardButtonData("삼진 ✖", "stop_samg"),
+				tgbotapi.NewInlineKeyboardButtonData("아덴 ✖", "stop_arden"),
+				tgbotapi.NewInlineKeyboardButtonData("뽐뿌 ✖", "stop_ppomppu"),
+				tgbotapi.NewInlineKeyboardButtonData("루리웹 ✖", "stop_ruliweb"),
 			),
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("상태 조회", "health"),
-				tgbotapi.NewInlineKeyboardButtonData("도움말", "help"),
+				tgbotapi.NewInlineKeyboardButtonData("상태 조회 ❤", "health"),
+				tgbotapi.NewInlineKeyboardButtonData("도움말 ❔", "help"),
 			),
 		)
 
@@ -216,4 +239,21 @@ func (s *telegram) commandCallback(commandData string) (string, interface{}) {
 	}
 
 	return text, nil
+}
+
+func (s *telegram) recover(r interface{}, callback func(err error)) {
+	var err error
+	if r != nil {
+		log.Println("Recovered in f", r)
+		switch x := r.(type) {
+		case string:
+			err = errors.New(x)
+		case error:
+			err = x
+		default:
+			err = errors.New("unknown panic")
+		}
+
+		callback(err)
+	}
 }

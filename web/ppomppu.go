@@ -90,8 +90,9 @@ func (s *ppomppu) bf_ppomppu(queue *goconcurrentqueue.FIFO, sendMessage *map[str
 					if v, ok := (*sendMessage)["BF_PPOMPPU_IDX"].(string); !ok || v != idx {
 
 						messageMap := map[string]string{}
-						messageMap["title"] = fmt.Sprintf("[해외뽐뿌] %s", title)
-						messageMap["text"] = fmt.Sprintf("<a href=\"%s\"> </a>", fullImgSrc)
+						messageMap["title"] = "[뽐뿌 > 해외뽐뿌]"
+						messageMap["text"] = title
+						messageMap["imgUrl"] = fullImgSrc
 						messageMap["linkUrl"] = fmt.Sprintf("%s/zboard/%s", WEB_URL, hrefSrc)
 						queue.Enqueue(messageMap)
 					}
@@ -146,8 +147,9 @@ func (s *ppomppu) shopping_ppomppu(queue *goconcurrentqueue.FIFO, sendMessage *m
 
 					if v, ok := (*sendMessage)["SHOPPING_PPOMPPU_IDX"].(string); !ok || v != idx {
 						messageMap := map[string]string{}
-						messageMap["title"] = fmt.Sprintf("[쇼핑뽐뿌] %s", title)
-						messageMap["text"] = fmt.Sprintf("<a href=\"%s\"> </a>", fullImgSrc)
+						messageMap["title"] = "[뽐뿌 > 쇼핑뽐뿌]"
+						messageMap["text"] = title
+						messageMap["imgUrl"] = fullImgSrc
 						messageMap["linkUrl"] = fmt.Sprintf("%s/zboard/%s", WEB_URL, hrefSrc)
 						queue.Enqueue(messageMap)
 					}
