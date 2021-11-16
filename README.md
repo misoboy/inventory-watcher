@@ -10,7 +10,7 @@ GoLang (1.17.2) 버전으로 작성 되었습니다.
 
 ## Dependency
 ```
-go mod tidy
+go mod vendor
 ```
 
 ## Go Build & Run
@@ -19,7 +19,7 @@ go mod tidy
 GOOS=linux GOARCH=amd64 go build -o ./build/_output/bin/application ./cmd/watcher/
 
 # Run
-go run ./cmd/watcher/main.go
+go run -mod vendor ./cmd/watcher/main.go
 ```
 
 ## Docker Build & Push
