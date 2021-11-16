@@ -16,10 +16,10 @@ go mod tidy
 ## Go Build & Run
 ```
 # Build
-GOOS=linux GOARCH=amd64 go build -o ./build/_output/bin/application ./cmd/
+GOOS=linux GOARCH=amd64 go build -o ./build/_output/bin/application ./cmd/watcher/
 
 # Run
-go run main.go
+go run ./cmd/watcher/main.go
 ```
 
 ## Docker Build & Push
