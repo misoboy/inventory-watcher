@@ -6,7 +6,7 @@ import (
 	"github.com/enriquebris/goconcurrentqueue"
 	"github.com/gocolly/colly/v2"
 	"github.com/jasonlvhit/gocron"
-	"inventory-watcher/cron"
+	"inventory-watcher/cmd/cron"
 	"log"
 	"regexp"
 	"strings"

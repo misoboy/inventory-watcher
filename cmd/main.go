@@ -4,9 +4,9 @@ import (
 	"github.com/enriquebris/goconcurrentqueue"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jasonlvhit/gocron"
-	"inventory-watcher/cron"
-	"inventory-watcher/telegram"
-	"inventory-watcher/web"
+	"inventory-watcher/cmd/cron"
+	"inventory-watcher/cmd/telegram"
+	web2 "inventory-watcher/cmd/web"
 	"log"
 	"os"
 )
@@ -28,10 +28,10 @@ func main() {
 
 	sendMessage := make(map[string]interface{})
 	cronActions := make(map[string]cron.ICronAction)
-	cronActions["ARDEN"] = web.NewArdenbike(subCron, queue, &sendMessage)
-	cronActions["SAMG"] = web.NewSamg(subCron, queue, &sendMessage)
-	cronActions["PPOMPPU"] = web.NewPpomppu(subCron, queue, &sendMessage)
-	cronActions["RULIWEB"] = web.NewRuliweb(subCron, queue, &sendMessage)
+	cronActions["ARDEN"] = web2.NewArdenbike(subCron, queue, &sendMessage)
+	cronActions["SAMG"] = web2.NewSamg(subCron, queue, &sendMessage)
+	cronActions["PPOMPPU"] = web2.NewPpomppu(subCron, queue, &sendMessage)
+	cronActions["RULIWEB"] = web2.NewRuliweb(subCron, queue, &sendMessage)
 
 	mainCron := cron.NewCron(subCron, &cronActions, queue)
 	// 오전 7시 (UTC + 9Hour)

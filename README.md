@@ -1,5 +1,5 @@
 # Inventory Watcher (by Golang)
-재고 조회를 GoLang 으로 구현한 데몬 애플리케이션 입니다.<br/>
+재고 조회를 GoLang 으로 구현한 데몬 애플리케이션 입니다.
 1. SAMG SHOP
 2. AdenBike Shop
 3. PPOMPPU
@@ -16,7 +16,7 @@ go mod tidy
 ## Go Build & Run
 ```
 # Build
-GOOS=linux GOARCH=amd64 go build -o ./bin/application
+GOOS=linux GOARCH=amd64 go build -o ./build/_output/bin/application ./cmd/
 
 # Run
 go run main.go
@@ -25,7 +25,7 @@ go run main.go
 ## Docker Build & Push
 ```
 # Build
-docker build -t misoboy/inventory-watcher:latest -f ./Dockerfile .
+docker build -t misoboy/inventory-watcher:latest -f ./build/Dockerfile ./build/_output/
 
 # Push
 docker push misoboy/inventory-watcher:latest
