@@ -6,7 +6,7 @@ import (
 	"github.com/enriquebris/goconcurrentqueue"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jasonlvhit/gocron"
-	"inventory-watcher/cron"
+	"github.com/misoboy/inventory-watcher/pkg/cron"
 	"log"
 	"strconv"
 	"time"

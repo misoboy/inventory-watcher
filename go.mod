@@ -1,4 +1,4 @@
-module inventory-watcher
+module github.com/misoboy/inventory-watcher
 
 go 1.17
 
