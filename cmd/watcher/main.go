@@ -14,6 +14,9 @@ import (
 var TELEGRAM_BOT_TOKEN = os.Getenv("TELEGRAM_BOT_TOKEN")
 var TELEGRAM_CHAT_ID = os.Getenv("TELEGRAM_CHAT_ID")
 
+//var TELEGRAM_BOT_TOKEN = "1959594081:AAFvLlyEMt8RWOyAd_EN3m-Pq1isvEn_RQI"
+//var TELEGRAM_CHAT_ID = "1780899035"
+
 func main() {
 
 	bot, err := tgbotapi.NewBotAPI(TELEGRAM_BOT_TOKEN)
@@ -28,10 +31,12 @@ func main() {
 
 	sendMessage := make(map[string]interface{})
 	cronActions := make(map[string]cron.ICronAction)
-	cronActions["ARDEN"] = web.NewArdenbike(subCron, queue, &sendMessage)
-	cronActions["SAMG"] = web.NewSamg(subCron, queue, &sendMessage)
-	cronActions["PPOMPPU"] = web.NewPpomppu(subCron, queue, &sendMessage)
+	//cronActions["ARDEN"] = web.NewArdenbike(subCron, queue, &sendMessage)
+	//cronActions["SAMG"] = web.NewSamg(subCron, queue, &sendMessage)
+	//cronActions["PPOMPPU"] = web.NewPpomppu(subCron, queue, &sendMessage)
 	cronActions["RULIWEB"] = web.NewRuliweb(subCron, queue, &sendMessage)
+	cronActions["GANGNAM"] = web.NewGangnam(subCron, queue, &sendMessage)
+	//cronActions["HIMART"] = web.NewHimart(subCron, queue, &sendMessage)
 
 	mainCron := cron.NewCron(subCron, &cronActions, queue)
 	// 오전 7시 (UTC + 9Hour)

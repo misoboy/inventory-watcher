@@ -159,17 +159,19 @@ func (s *telegram) commandAction(command string) (string, interface{}) {
 		helpBtn = tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("모두 실행", "start_all"),
-				tgbotapi.NewInlineKeyboardButtonData("삼진 ✔", "start_samg"),
-				tgbotapi.NewInlineKeyboardButtonData("아덴 ✔", "start_arden"),
-				tgbotapi.NewInlineKeyboardButtonData("뽐뿌 ✔", "start_ppomppu"),
+				//tgbotapi.NewInlineKeyboardButtonData("삼진 ✔", "start_samg"),
+				//tgbotapi.NewInlineKeyboardButtonData("아덴 ✔", "start_arden"),
+				//tgbotapi.NewInlineKeyboardButtonData("뽐뿌 ✔", "start_ppomppu"),
 				tgbotapi.NewInlineKeyboardButtonData("루리웹 ✔", "start_ruliweb"),
+				tgbotapi.NewInlineKeyboardButtonData("강남구청 ✔", "start_gangnam"),
 			),
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("모두 중지", "stop_all"),
-				tgbotapi.NewInlineKeyboardButtonData("삼진 ✖", "stop_samg"),
-				tgbotapi.NewInlineKeyboardButtonData("아덴 ✖", "stop_arden"),
-				tgbotapi.NewInlineKeyboardButtonData("뽐뿌 ✖", "stop_ppomppu"),
+				//tgbotapi.NewInlineKeyboardButtonData("삼진 ✖", "stop_samg"),
+				//tgbotapi.NewInlineKeyboardButtonData("아덴 ✖", "stop_arden"),
+				//tgbotapi.NewInlineKeyboardButtonData("뽐뿌 ✖", "stop_ppomppu"),
 				tgbotapi.NewInlineKeyboardButtonData("루리웹 ✖", "stop_ruliweb"),
+				tgbotapi.NewInlineKeyboardButtonData("강남구청 ✖", "stop_gangnam"),
 			),
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("상태 조회 ❤", "health"),
@@ -204,6 +206,9 @@ func (s *telegram) commandCallback(commandData string) (string, interface{}) {
 	case "start_ruliweb":
 		(*s.cronActions)["RULIWEB"].Start()
 		text = "[루리웹] 배치 시작 완료"
+	case "start_gangnam":
+		(*s.cronActions)["GANGNAM"].Start()
+		text = "[강남구청] 배치 시작 완료"
 	case "stop_all":
 		for _, v := range *s.cronActions {
 			v.Stop()
@@ -221,6 +226,9 @@ func (s *telegram) commandCallback(commandData string) (string, interface{}) {
 	case "stop_ruliweb":
 		(*s.cronActions)["RULIWEB"].Stop()
 		text = "[루리웹] 배치 중지 완료"
+	case "stop_gangnam":
+		(*s.cronActions)["GANGNAM"].Stop()
+		text = "[강남구청] 배치 중지 완료"
 	case "health":
 		kst, _ := time.LoadLocation("Asia/Seoul")
 		rootTxt := fmt.Sprintf("Root Cron Job Running : %d \n", len(gocron.Jobs()))

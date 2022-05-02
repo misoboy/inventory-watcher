@@ -58,35 +58,29 @@ func (s *ruliweb) hotdeal_ruliweb(queue *goconcurrentqueue.FIFO, sendMessage *ma
 		requestUrl = r.URL.String()
 	})
 
-	c.OnHTML("table.board_list_table > tbody", func(e *colly.HTMLElement) {
+	c.OnHTML("table.board_list_table", func(e *colly.HTMLElement) {
 
-		e.ForEach("tr", func(i int, tre *colly.HTMLElement) {
-			if i == 8 {
+		e.ForEach("tr.table_body", func(i int, tre *colly.HTMLElement) {
+			if !strings.Contains(tre.Attr("class"), "best") && !strings.Contains(tre.Attr("class"), "notice") {
+				elem := tre.DOM.Find("div.flex_wrapper > .flex_item").Eq(0)
+				idx, _ := elem.Find("input[name=article_id]").Attr("value")
+				idx = strings.TrimSpace(idx)
+				imgSrc, _ := elem.Find("a.thumbnail").Attr("style")
+				imgSrc = strings.Replace(strings.TrimSpace(imgSrc), "background-image: url(", "", 1)
+				imgSrc = strings.Replace(imgSrc, ");", "", 1)
+				hrefSrc, _ := elem.Find("a.thumbnail").Attr("href")
+				title := strings.TrimSpace(elem.Find("a.deco").Text())
 
-				class := strings.TrimSpace(tre.Attr("class"))
+				if v, _ := (*sendMessage)["HOTDEAL_RULIWEB_IDX"].(string); v != idx {
 
-				if class != "" && class == "table_body" {
-
-					elem := tre.DOM.Find("td").Eq(0).Find("div.flex_item").Eq(0)
-					idx, _ := elem.Find("input[name=article_id]").Attr("value")
-					imgSrc, _ := elem.Find("a.thumbnail").Attr("style")
-					imgSrc = strings.Replace(strings.TrimSpace(imgSrc), "background-image: url(", "", 1)
-					imgSrc = strings.Replace(imgSrc, ");", "", 1)
-					hrefSrc, _ := elem.Find("a.thumbnail").Attr("href")
-					title := strings.TrimSpace(elem.Find("a.deco").Text())
-
-					if v, ok := (*sendMessage)["HOTDEAL_RULIWEB_IDX"].(string); !ok || v != idx {
-
-						messageMap := map[string]string{}
-						messageMap["title"] = fmt.Sprintf("[루리웹 > 예판/핫딜]")
-						messageMap["text"] = title
-						messageMap["imgUrl"] = imgSrc
-						messageMap["linkUrl"] = hrefSrc
-						queue.Enqueue(messageMap)
-					}
-					(*sendMessage)["HOTDEAL_RULIWEB_IDX"] = idx
-
+					messageMap := map[string]string{}
+					messageMap["title"] = fmt.Sprintf("[루리웹 > 예판/핫딜]")
+					messageMap["text"] = title
+					messageMap["imgUrl"] = imgSrc
+					messageMap["linkUrl"] = hrefSrc
+					queue.Enqueue(messageMap)
 				}
+				(*sendMessage)["HOTDEAL_RULIWEB_IDX"] = idx
 			}
 		})
 	})
