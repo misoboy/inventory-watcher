@@ -14,9 +14,6 @@ import (
 var TELEGRAM_BOT_TOKEN = os.Getenv("TELEGRAM_BOT_TOKEN")
 var TELEGRAM_CHAT_ID = os.Getenv("TELEGRAM_CHAT_ID")
 
-//var TELEGRAM_BOT_TOKEN = "1959594081:AAFvLlyEMt8RWOyAd_EN3m-Pq1isvEn_RQI"
-//var TELEGRAM_CHAT_ID = "1780899035"
-
 func main() {
 
 	bot, err := tgbotapi.NewBotAPI(TELEGRAM_BOT_TOKEN)
